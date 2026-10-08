@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>docscan demo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0 auto;
+        padding: 16px;
+        max-width: 1200px;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+      .panes {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      canvas {
+        width: 100%;
+        height: auto;
+        background: #8884;
+        border-radius: 6px;
+      }
+      #source {
+        touch-action: none; /* corners are dragged with pointer events */
+        cursor: crosshair;
+      }
+      #status {
+        min-height: 1.5em;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>docscan demo</h1>
+    <div class="toolbar">
+      <input id="file" type="file" accept="image/*" capture="environment" />
+      <label>
+        Bộ lọc
+        <select id="mode">
+          <option value="magic">Magic color</option>
+          <option value="bw">Đen trắng</option>
+          <option value="gray">Xám</option>
+          <option value="none">Gốc</option>
+        </select>
+      </label>
+      <button id="download" disabled>Tải ảnh JPEG</button>
+    </div>
+    <p id="status">Đang tải WebAssembly…</p>
+    <div class="panes">
+      <canvas id="source" width="4" height="3"></canvas>
+      <canvas id="result" width="4" height="3"></canvas>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

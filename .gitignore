@@ -1,0 +1,16 @@
+# Build outputs
+/build/
+/dist/
+/node_modules/
+
+# Dependencies fetched/built by scripts (OpenCV source, wasm build)
+/third_party/opencv/
+
+# Machine-specific CMake settings
+CMakeUserPresets.json
+
+# Editors / OS
+.vs/
+*.user
+.DS_Store
+Thumbs.db

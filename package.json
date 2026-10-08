@@ -1,0 +1,40 @@
+{
+  "name": "docscan",
+  "version": "0.1.0",
+  "description": "Document & card scanner (auto-detect, crop, perspective correction, scan filters): C++/OpenCV compiled to WebAssembly for browsers and Node.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./docscan.wasm": "./dist/wasm/docscan.wasm"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "opencv:wasm": "node scripts/build-opencv-wasm.mjs",
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "build:ts": "tsc -p tsconfig.json",
+    "build": "npm run build:wasm && npm run build:ts",
+    "test": "node --test \"tests/js/**/*.test.mjs\"",
+    "serve": "node scripts/serve.mjs",
+    "clean": "node -e \"for (const d of ['dist', 'build']) require('fs').rmSync(d, { recursive: true, force: true })\""
+  },
+  "keywords": [
+    "document-scanner",
+    "camscanner",
+    "opencv",
+    "webassembly",
+    "perspective-correction"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,10 @@
+# Allman braces, 4 spaces (VS Code's default "Visual Studio" style), wider lines.
+BasedOnStyle: Microsoft
+ColumnLimit: 110
+IndentWidth: 4
+AccessModifierOffset: -4
+PointerAlignment: Left
+NamespaceIndentation: None
+FixNamespaceComments: true
+AllowShortLambdasOnASingleLine: All
+SortIncludes: CaseSensitive
