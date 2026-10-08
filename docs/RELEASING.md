@@ -38,6 +38,9 @@ Trên CI, mọi commit của pull request được commitlint kiểm tra lại, 
 
 Điều kiện: CI trên `main` đang xanh, working tree sạch.
 
+Trước khi tag, viết phần giới thiệu bản phát hành vào `docs/releases/vX.Y.Z.md` (xem `v0.1.0.md`) rồi commit.
+Workflow sẽ dùng file đó làm nội dung trang GitHub Release, sau đó nối thêm danh sách thay đổi do GitHub tự sinh.
+
 ```bash
 npm version 0.2.0          # sửa package.json + package-lock.json, tạo commit "chore(release): 0.2.0" và tag v0.2.0
 git push origin main --follow-tags

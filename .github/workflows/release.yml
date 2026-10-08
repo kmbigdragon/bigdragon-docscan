@@ -34,14 +34,23 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Only the hand-written release notes are needed from the repository (docs/releases/<tag>.md).
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: docs/releases
+          path: source
+
       - uses: actions/download-artifact@v8
         with:
           name: package
+          path: package
 
       - name: Checksums
+        working-directory: package
         run: for file in *.tgz; do sha256sum "$file" > "$file.sha256"; done
 
       - name: Create the release
+        working-directory: package
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
@@ -50,16 +59,18 @@ jobs:
           tarballs=(*.tgz)
           if [[ ${#tarballs[@]} -ne 1 ]]; then echo "expected exactly one tarball, got ${#tarballs[@]}"; exit 1; fi
           tarball=${tarballs[0]}
-          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$tarball"
-          cat > notes.md <<EOF
-          ## Cài đặt
 
-          \`\`\`bash
-          npm install $url
-          \`\`\`
+          # Release notes: docs/releases/<tag>.md when it exists, otherwise just the install command.
+          # GitHub's generated list of changes is appended either way.
+          written="../source/docs/releases/$TAG.md"
+          if [[ -f "$written" ]]; then
+            cp "$written" ../notes.md
+          else
+            url="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$tarball"
+            # shellcheck disable=SC2016 # the backticks are a literal Markdown code fence
+            printf '## Cài đặt\n\n```bash\nnpm install %s\n```\n' "$url" > ../notes.md
+          fi
 
-          Hoặc tải \`$tarball\` về, kiểm tra \`sha256sum -c $tarball.sha256\`, rồi \`npm install ./$tarball\`.
-          EOF
-          flags=(--title "$TAG" --notes-file notes.md --generate-notes --verify-tag)
+          flags=(--title "docscan $TAG" --notes-file ../notes.md --generate-notes --verify-tag)
           if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$TAG" "$tarball" "$tarball.sha256" --repo "$GITHUB_REPOSITORY" "${flags[@]}"

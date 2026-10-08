@@ -2,6 +2,7 @@
 // Installs a packed tarball into a fresh, empty project and uses it the way a consumer would:
 // catches files missing from `files`, broken `exports`, or a wasm that is not found at runtime.
 //   node scripts/release/smoke-test-package.mjs docscan-0.1.0.tgz
+//   node scripts/release/smoke-test-package.mjs https://github.com/<owner>/<repo>/releases/download/v0.1.0/docscan-0.1.0.tgz
 
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -18,7 +19,8 @@ const project = mkdtempSync(join(tmpdir(), 'docscan-smoke-'));
 try {
   writeFileSync(join(project, 'package.json'), JSON.stringify({ name: 'smoke', private: true, type: 'module' }));
   // npm is npm.cmd on Windows, which Node only spawns through a shell: pass one quoted command line.
-  const install = spawnSync(`npm install --no-audit --no-fund "${resolve(tarball)}"`, {
+  const source = /^https?:\/\//.test(tarball) ? tarball : resolve(tarball);
+  const install = spawnSync(`npm install --no-audit --no-fund "${source}"`, {
     cwd: project,
     stdio: 'inherit',
     shell: true,
