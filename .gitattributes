@@ -1,0 +1,6 @@
+# Normalise text files in the repository; check them out with the platform's line endings...
+* text=auto
+
+# ...except shell scripts run by git: with CRLF, `"$1"` in a hook would carry a trailing \r.
+.husky/** text eol=lf
+*.sh text eol=lf
