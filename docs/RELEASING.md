@@ -67,7 +67,7 @@ Hai lớp bảo vệ để không phát hành nhầm:
 
 ```bash
 npm run build && npm test
-npm pack                                   # → docscan-X.Y.Z.tgz
+npm run release:pack                       # → docscan-X.Y.Z.tgz (npm pack, bỏ script `prepare` của husky)
 npm run release:smoke -- docscan-X.Y.Z.tgz # cài vào dự án trắng và gọi thử
 ```
 

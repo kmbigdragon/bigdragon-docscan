@@ -86,7 +86,7 @@ jobs:
 
       - name: Pack
         id: pack
-        run: echo "file=$(npm pack --silent | tail -n 1)" >> "$GITHUB_OUTPUT"
+        run: echo "file=$(node scripts/release/pack.mjs)" >> "$GITHUB_OUTPUT"
 
       - name: Smoke-test the tarball in a fresh project
         run: npm run release:smoke -- "${{ steps.pack.outputs.file }}"
