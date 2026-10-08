@@ -1,5 +1,7 @@
 # docscan
 
+[![CI](https://github.com/kmbigdragon/bigdragon-docscan/actions/workflows/ci.yml/badge.svg)](https://github.com/kmbigdragon/bigdragon-docscan/actions/workflows/ci.yml)
+
 Thư viện quét tài liệu/thẻ kiểu CamScanner: **tự phát hiện viền → cắt & nắn phối cảnh → bộ lọc scan**.
 Lõi viết bằng C++17 + OpenCV, biên dịch sang **WebAssembly** để dùng được ở cả **trình duyệt** và **Node.js**
 qua một API JavaScript/TypeScript duy nhất.
@@ -13,6 +15,16 @@ const page = scanner.warp(imageData, corners, { aspectRatio: AspectRatio.ID_CARD
 const scan = scanner.enhance(page, 'magic');                     // 'none' | 'gray' | 'bw' | 'magic'
 // hoặc gộp cả 3 bước: scanner.scan(imageData, { enhance: 'bw' })
 ```
+
+## Cài đặt
+
+Mỗi bản phát hành trên [GitHub Releases](https://github.com/kmbigdragon/bigdragon-docscan/releases) có sẵn tarball npm:
+
+```bash
+npm install https://github.com/kmbigdragon/bigdragon-docscan/releases/download/v0.1.0/docscan-0.1.0.tgz
+```
+
+Quy trình CI/CD và cách phát hành phiên bản mới: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Kiến trúc
 
@@ -95,6 +107,72 @@ Lấy `ImageData` từ canvas, truyền thẳng vào các hàm; kết quả hi�
 Nếu bundler không tự copy file wasm, dùng `createDocScanner({ locateFile: () => urlCuaDocscanWasm })`
 (file được export tại `docscan/docscan.wasm`).
 
+### Dùng với React (Vite)
+
+Đã kiểm chứng với Vite 8 + React 19 (dev, build, Web Worker); Vite tự đóng gói `docscan.wasm` thành asset.
+Cảnh báo `Module "node:module" has been externalized` khi build là vô hại (nhánh đó chỉ chạy trên Node).
+
+```bash
+npm install ../docscan          # khi phát triển: link tới thư mục (cần `npm run build` trong docscan trước)
+# hoặc: npm pack trong docscan, rồi npm install ./docscan-0.1.0.tgz
+```
+
+Khi link bằng thư mục, Vite dev server chặn file ngoài dự án (lỗi 403 khi tải `docscan.wasm`):
+
+```ts
+// vite.config.ts
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
+export default defineConfig({
+  server: { fs: { allow: [searchForWorkspaceRoot(process.cwd()), '../docscan'] } },
+});
+```
+
+Tải module một lần cho cả app (StrictMode chạy effect hai lần):
+
+```tsx
+import { useEffect, useState } from 'react';
+import { createDocScanner, type DocScanner } from 'docscan';
+
+let scannerPromise: Promise<DocScanner> | undefined;
+const loadDocScanner = () => (scannerPromise ??= createDocScanner());
+
+export function useDocScanner() {
+  const [scanner, setScanner] = useState<DocScanner | null>(null);
+  useEffect(() => {
+    let active = true;
+    loadDocScanner().then((s) => active && setScanner(s));
+    return () => { active = false; };
+  }, []);
+  return scanner;
+}
+
+// Trong component: ImageData lấy từ canvas
+const { detection, image } = scanner.scan(imageData, { enhance: 'magic' });
+ctx.putImageData(new ImageData(image.data, image.width, image.height), 0, 0);
+```
+
+Ảnh camera lớn (12MP) mất cỡ 1 giây, nên chạy trong Web Worker để không đơ giao diện:
+
+```ts
+// docscan.worker.ts
+import { createDocScanner, type ScanOptions } from 'docscan';
+const scannerPromise = createDocScanner();
+self.onmessage = async (e: MessageEvent<{ id: number; photo: ImageData; options: ScanOptions }>) => {
+  const { id, photo, options } = e.data;
+  try {
+    const result = (await scannerPromise).scan(photo, options);
+    self.postMessage({ id, result }, { transfer: [result.image.data.buffer] });
+  } catch (error) {
+    self.postMessage({ id, error: (error as Error).message });
+  }
+};
+
+// phía component
+const worker = new Worker(new URL('./docscan.worker.ts', import.meta.url), { type: 'module' });
+```
+
+Next.js (chưa kiểm chứng): chỉ gọi docscan ở client (`'use client'`, tải trong `useEffect`), không gọi khi SSR.
+
 ## Thuật toán hiện tại (baseline)
 
 1. **Detect** (`core/src/detect.cpp`): thu nhỏ về 640px → xám → *closing* để xoá chữ trong trang →
@@ -105,6 +183,19 @@ Nếu bundler không tự copy file wasm, dùng `createDocScanner({ locateFile: 
    `INTER_AREA` khi giảm mạnh để tránh răng cưa, rồi `warpPerspective`.
 3. **Enhance** (`enhance.cpp`): ước lượng nền giấy (dilate + median trên ảnh nhỏ) rồi chia nền để xoá
    bóng đổ; `bw` = adaptive threshold, `magic` = làm phẳng từng kênh màu + tăng tương phản quanh màu trắng.
+
+## Đánh giá định lượng
+
+Chất lượng phát hiện được đo trên bộ chuẩn ICDAR 2015 SmartDoc (24 889 frame) theo đúng giao thức
+Jaccard index của cuộc thi, có khoảng tin cậy bootstrap và so sánh ghép cặp giữa các phiên bản.
+Hiện tại: **mean JI 0.869** (nền 1–3 ≈ 0.97). Cách chạy, chỉ số, kết quả và nhật ký thí nghiệm:
+[docs/EVALUATION.md](docs/EVALUATION.md).
+
+```bash
+npm run dataset:smartdoc15
+build/native-release/apps/bench/docscan-bench data/smartdoc15-ch1/manifest.csv bench-results/run.csv
+npm run eval:report -- bench-results/run.csv --baseline bench-results/baseline.csv
+```
 
 ## Hướng phát triển (roadmap)
 

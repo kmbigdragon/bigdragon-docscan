@@ -9,7 +9,8 @@ export interface ImageLike {
 export interface RgbaImage {
   width: number;
   height: number;
-  data: Uint8ClampedArray;
+  /** Always backed by its own (non-shared) ArrayBuffer, as `new ImageData()` requires. */
+  data: Uint8ClampedArray<ArrayBuffer>;
 }
 
 export interface Point {
@@ -23,7 +24,7 @@ export type Quad = [Point, Point, Point, Point];
 export interface DetectOptions {
   /** Longest side (px) of the downscaled copy used for detection. Default 640. */
   workingSize?: number;
-  /** Minimum document area relative to the image, in [0, 1). Default 0.1. */
+  /** Minimum document area relative to the image, in [0, 1). Default 0.05. */
   minAreaRatio?: number;
 }
 

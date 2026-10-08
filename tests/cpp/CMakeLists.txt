@@ -15,5 +15,10 @@ add_executable(docscan_tests
 target_link_libraries(docscan_tests PRIVATE docscan::core opencv_imgproc GTest::gtest_main)
 docscan_enable_warnings(docscan_tests)
 
+if(TARGET docscan_eval)
+    target_sources(docscan_tests PRIVATE test_metrics.cpp)
+    target_link_libraries(docscan_tests PRIVATE docscan_eval)
+endif()
+
 include(GoogleTest)
 gtest_discover_tests(docscan_tests DISCOVERY_MODE PRE_TEST)

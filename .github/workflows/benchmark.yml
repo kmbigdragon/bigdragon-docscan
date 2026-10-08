@@ -1,0 +1,60 @@
+# On-demand quality benchmark on ICDAR 2015 SmartDoc (docs/EVALUATION.md). Not part of CI: it
+# downloads ~1 GB (cached) and its numbers come from the runner's OpenCV, not the local one.
+# Actions -> Benchmark -> Run workflow. The report appears in the run summary.
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      split:
+        description: "Manifest split: test, dev, or empty for all frames"
+        default: "test"
+      stride:
+        description: "Use every n-th frame (1 = all)"
+        default: "1"
+
+permissions:
+  contents: read
+
+jobs:
+  smartdoc15:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install Ninja and OpenCV
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build libopencv-dev
+
+      - name: Cache SmartDoc 2015 archive
+        uses: actions/cache@v6
+        with:
+          path: data/smartdoc15-ch1/frames.tar.gz
+          key: smartdoc15-ch1-v2.0.0
+
+      - name: Prepare dataset
+        run: npm run dataset:smartdoc15
+
+      - name: Build docscan-bench
+        run: |
+          cmake --preset native-release
+          cmake --build --preset native-release --target docscan_bench
+
+      - name: Run benchmark
+        env:
+          SPLIT: ${{ inputs.split }}
+          STRIDE: ${{ inputs.stride }}
+        run: |
+          mkdir -p bench-results
+          args=(data/smartdoc15-ch1/manifest.csv bench-results/run.csv --stride "$STRIDE")
+          if [[ -n "$SPLIT" ]]; then args+=(--split "$SPLIT"); fi
+          build/native-release/apps/bench/docscan-bench "${args[@]}"
+          node scripts/eval/report.mjs bench-results/run.csv --worst 20 --json bench-results/summary.json >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-results
+          path: bench-results/

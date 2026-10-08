@@ -10,8 +10,9 @@ struct DetectOptions
     /// Detection runs on a copy whose longest side is at most this many pixels.
     /// Smaller is faster, larger gives more precise corners.
     int workingSize = 640;
-    /// Minimum document area relative to the image area, in [0, 1).
-    double minAreaRatio = 0.1;
+    /// Minimum document area relative to the image area, in [0, 1). Pages in SmartDoc 2015 cover
+    /// only 10-16 % of the frame; 0.05 was chosen on its dev split (see docs/EVALUATION.md).
+    double minAreaRatio = 0.05;
 };
 
 struct DetectResult

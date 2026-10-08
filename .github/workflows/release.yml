@@ -1,0 +1,65 @@
+# Release: pushing a tag vX.Y.Z (created by `npm version X.Y.Z`) builds and tests everything,
+# then publishes a GitHub Release with the installable tarball and its SHA-256 checksum:
+#   npm install https://github.com/<owner>/<repo>/releases/download/vX.Y.Z/docscan-X.Y.Z.tgz
+# Tags with a suffix (v0.3.0-rc.1) become pre-releases. See docs/RELEASING.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Tag matches package.json
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: node scripts/release/check-tag.mjs "$GITHUB_REF_NAME"
+
+  build:
+    needs: version
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+
+      - name: Checksums
+        run: for file in *.tgz; do sha256sum "$file" > "$file.sha256"; done
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          shopt -s nullglob
+          tarballs=(*.tgz)
+          if [[ ${#tarballs[@]} -ne 1 ]]; then echo "expected exactly one tarball, got ${#tarballs[@]}"; exit 1; fi
+          tarball=${tarballs[0]}
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$tarball"
+          cat > notes.md <<EOF
+          ## Cài đặt
+
+          \`\`\`bash
+          npm install $url
+          \`\`\`
+
+          Hoặc tải \`$tarball\` về, kiểm tra \`sha256sum -c $tarball.sha256\`, rồi \`npm install ./$tarball\`.
+          EOF
+          flags=(--title "$TAG" --notes-file notes.md --generate-notes --verify-tag)
+          if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$TAG" "$tarball" "$tarball.sha256" --repo "$GITHUB_REPOSITORY" "${flags[@]}"

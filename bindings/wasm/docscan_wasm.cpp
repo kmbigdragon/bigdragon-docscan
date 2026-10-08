@@ -225,9 +225,8 @@ std::string version()
 val detect(const val& image, const val& options)
 {
     return guarded([&] {
-        cv::Mat gray;
-        cv::cvtColor(rgbaFromJs(image), gray, cv::COLOR_RGBA2GRAY);
-        return detectionToJs(docscan::detectDocument(gray, detectOptionsFromJs(options)));
+        // Color matters: detection also looks for hue edges, not only luminance edges.
+        return detectionToJs(docscan::detectDocument(bgrFromJs(image), detectOptionsFromJs(options)));
     });
 }
 

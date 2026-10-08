@@ -22,6 +22,7 @@ Options:
   --enhance <mode>   none | gray | bw | magic          (default: magic)
   --aspect <ratio>   a4 | letter | card | <number>      (default: from the corners)
   --max-size <px>    limit the longest output side      (default: no limit)
+  --min-area <ratio> smallest document area / image area (default: library default)
   --debug <file>     also save the input with the detected outline drawn on it
   -h, --help         show this help
 )";
@@ -79,6 +80,10 @@ CliOptions parseArgs(const std::vector<std::string>& args)
         else if (arg == "--max-size")
         {
             options.scan.warp.maxOutputSize = std::stoi(value());
+        }
+        else if (arg == "--min-area")
+        {
+            options.scan.detect.minAreaRatio = std::stod(value());
         }
         else if (arg == "--debug")
         {

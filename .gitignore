@@ -6,6 +6,10 @@
 # Dependencies fetched/built by scripts (OpenCV source, wasm build)
 /third_party/opencv/
 
+# Evaluation datasets (downloaded by scripts/datasets/*) and benchmark outputs
+/data/
+/bench-results/
+
 # Machine-specific CMake settings
 CMakeUserPresets.json
 

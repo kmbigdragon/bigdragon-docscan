@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 # package.json is the single source of truth for the version.
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/package.json" _docscan_package_json)
-string(JSON _docscan_version GET "${_docscan_package_json}" version)
-string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" _docscan_version "${_docscan_version}")
+string(JSON DOCSCAN_VERSION_FULL GET "${_docscan_package_json}" version) # e.g. 0.2.0-rc.1
+string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" _docscan_version "${DOCSCAN_VERSION_FULL}")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS package.json)
 
 project(docscan
@@ -30,6 +30,7 @@ endif()
 option(DOCSCAN_BUILD_WASM "Build the WebAssembly module for JavaScript (needs Emscripten)" ${_docscan_wasm})
 option(DOCSCAN_BUILD_CLI "Build the docscan-cli tool (native only)" ${_docscan_native})
 option(DOCSCAN_BUILD_TESTS "Build the C++ unit tests (native only)" ${_docscan_native})
+option(DOCSCAN_BUILD_BENCH "Build docscan-bench, the dataset evaluation tool (native only)" ${_docscan_native})
 option(DOCSCAN_WASM_SIMD "Use WebAssembly SIMD128 (keep in sync with the OpenCV build)" ON)
 set(DOCSCAN_WASM_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/dist/wasm" CACHE PATH
     "Directory that receives docscan.mjs and docscan.wasm")
@@ -37,8 +38,8 @@ set(DOCSCAN_WASM_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/dist/wasm" CACHE PATH
 if(DOCSCAN_BUILD_WASM AND NOT EMSCRIPTEN)
     message(FATAL_ERROR "DOCSCAN_BUILD_WASM needs the Emscripten toolchain: run `npm run build:wasm`.")
 endif()
-if(EMSCRIPTEN AND (DOCSCAN_BUILD_CLI OR DOCSCAN_BUILD_TESTS))
-    message(FATAL_ERROR "The CLI and the C++ tests are native-only: use the `native` preset for them.")
+if(EMSCRIPTEN AND (DOCSCAN_BUILD_CLI OR DOCSCAN_BUILD_TESTS OR DOCSCAN_BUILD_BENCH))
+    message(FATAL_ERROR "The CLI, bench and C++ tests are native-only: use the `native` preset for them.")
 endif()
 
 if(EMSCRIPTEN)
@@ -51,7 +52,7 @@ if(EMSCRIPTEN)
 endif()
 
 set(_docscan_opencv_components core imgproc)
-if(DOCSCAN_BUILD_CLI)
+if(DOCSCAN_BUILD_CLI OR DOCSCAN_BUILD_BENCH)
     list(APPEND _docscan_opencv_components imgcodecs)
 endif()
 find_package(OpenCV REQUIRED COMPONENTS ${_docscan_opencv_components})
@@ -64,6 +65,9 @@ if(DOCSCAN_BUILD_WASM)
 endif()
 if(DOCSCAN_BUILD_CLI)
     add_subdirectory(apps/cli)
+endif()
+if(DOCSCAN_BUILD_BENCH)
+    add_subdirectory(apps/bench)
 endif()
 if(DOCSCAN_BUILD_TESTS)
     enable_testing()

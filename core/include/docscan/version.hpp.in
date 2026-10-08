@@ -5,12 +5,12 @@
 #define DOCSCAN_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
 #define DOCSCAN_VERSION_MINOR @PROJECT_VERSION_MINOR@
 #define DOCSCAN_VERSION_PATCH @PROJECT_VERSION_PATCH@
-#define DOCSCAN_VERSION "@PROJECT_VERSION@"
+#define DOCSCAN_VERSION "@DOCSCAN_VERSION_FULL@"
 
 namespace docscan
 {
 
-/// Library version, e.g. "0.1.0".
+/// Library version, exactly as in package.json (e.g. "0.1.0" or "0.2.0-rc.1").
 inline const char* version()
 {
     return DOCSCAN_VERSION;

@@ -42,24 +42,52 @@ struct Candidate
     double score = 0.0;
 };
 
-EdgeMaps buildEdgeMaps(const cv::Mat& gray)
+// Closing (dilate, then erode) wipes out dark text and thin texture, so the paper becomes a flat
+// region and mostly its outline produces edges.
+cv::Mat smoothChannel(const cv::Mat& channel)
 {
-    // Closing (dilate, then erode) wipes out dark text and thin texture, so the paper becomes a
-    // flat region and mostly its outline produces edges.
-    const int kernelSize = detail::oddAtLeast(std::max(gray.cols, gray.rows) / 70, 3);
+    const int kernelSize = detail::oddAtLeast(std::max(channel.cols, channel.rows) / 70, 3);
     cv::Mat smooth;
-    cv::morphologyEx(gray, smooth, cv::MORPH_CLOSE,
+    cv::morphologyEx(channel, smooth, cv::MORPH_CLOSE,
                      cv::getStructuringElement(cv::MORPH_RECT, {kernelSize, kernelSize}));
     cv::GaussianBlur(smooth, smooth, {5, 5}, 0);
+    return smooth;
+}
 
-    // Otsu separates paper from background directly and gives Canny a contrast-adaptive base.
+// `image` is the GRAY or BGR(A) working copy.
+EdgeMaps buildEdgeMaps(const cv::Mat& image)
+{
+    // Otsu on the gray image separates paper from background directly.
+    const cv::Mat gray = smoothChannel(detail::toGray(image));
     cv::Mat mask;
-    const double otsu = cv::threshold(smooth, mask, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    cv::threshold(gray, mask, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
 
-    cv::Mat strong;
-    cv::Mat weak;
-    cv::Canny(smooth, strong, std::max(20.0, 0.5 * otsu), std::max(40.0, otsu));
-    cv::Canny(smooth, weak, std::max(10.0, 0.25 * otsu), std::max(20.0, 0.5 * otsu));
+    // Edges are collected on the gray image and on each color channel: white paper on a white
+    // but tinted table has almost no luminance contrast, yet differs in hue (SmartDoc background 4).
+    std::vector<cv::Mat> channels = {gray};
+    if (image.channels() >= 3)
+    {
+        std::vector<cv::Mat> bgr;
+        cv::split(image, bgr);
+        for (int c = 0; c < 3; ++c)
+        {
+            channels.push_back(smoothChannel(bgr[c]));
+        }
+    }
+
+    cv::Mat strong = cv::Mat::zeros(image.size(), CV_8U);
+    cv::Mat weak = cv::Mat::zeros(image.size(), CV_8U);
+    for (const cv::Mat& channel : channels)
+    {
+        // Otsu's threshold gives Canny a contrast-adaptive base.
+        cv::Mat ignored;
+        const double otsu = cv::threshold(channel, ignored, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+        cv::Mat edges;
+        cv::Canny(channel, edges, std::max(20.0, 0.5 * otsu), std::max(40.0, otsu));
+        strong |= edges;
+        cv::Canny(channel, edges, std::max(10.0, 0.25 * otsu), std::max(20.0, 0.5 * otsu));
+        weak |= edges;
+    }
 
     // Thicken the edges so small gaps do not split the outline into several contours.
     const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, {3, 3});
@@ -284,10 +312,8 @@ DetectResult detectDocument(const cv::Mat& image, const DetectOptions& options)
     {
         cv::resize(image, small, cv::Size(), scale, scale, cv::INTER_AREA);
     }
-    const cv::Mat gray = detail::toGray(small);
-
-    const EdgeMaps maps = buildEdgeMaps(gray);
-    const double minArea = options.minAreaRatio * static_cast<double>(gray.total());
+    const EdgeMaps maps = buildEdgeMaps(small);
+    const double minArea = options.minAreaRatio * static_cast<double>(small.total());
     std::vector<Candidate> candidates;
     for (const cv::Mat& source : maps.sources)
     {
