@@ -151,7 +151,8 @@ const { detection, image } = scanner.scan(imageData, { enhance: 'magic' });
 ctx.putImageData(new ImageData(image.data, image.width, image.height), 0, 0);
 ```
 
-Ảnh camera lớn (12MP) mất cỡ 1 giây, nên chạy trong Web Worker để không đơ giao diện:
+Ảnh camera 12MP mất khoảng 0.4 giây cho `scan` trên CPU laptop (lâu hơn trên điện thoại), nên chạy trong
+Web Worker để không đơ giao diện:
 
 ```ts
 // docscan.worker.ts
