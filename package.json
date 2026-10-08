@@ -28,7 +28,8 @@
     "eval:report": "node scripts/eval/report.mjs",
     "prepack": "node scripts/release/check-dist.mjs",
     "release:smoke": "node scripts/release/smoke-test-package.mjs",
-    "clean": "node -e \"for (const d of ['dist', 'build']) require('fs').rmSync(d, { recursive: true, force: true })\""
+    "clean": "node -e \"for (const d of ['dist', 'build']) require('fs').rmSync(d, { recursive: true, force: true })\"",
+    "prepare": "husky"
   },
   "keywords": [
     "document-scanner",
@@ -43,6 +44,9 @@
     "url": "git+https://github.com/kmbigdragon/bigdragon-docscan.git"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "husky": "^9.1.7",
     "typescript": "^7.0.2"
   }
 }

@@ -17,12 +17,29 @@
 
 Release và CI dùng chung `build.yml`, nên bản phát hành được build đúng như các lần CI đã qua.
 
+## Trước mỗi commit: husky + commitlint
+
+`npm install` tự bật các git hook trong `.husky/` (qua script `prepare`).
+
+| Hook | Kiểm tra |
+| --- | --- |
+| `pre-commit` → `scripts/hooks/pre-commit.mjs` | Chỉ kiểm tra những gì liên quan tới file đang stage: cú pháp JSON/JS; `tsc --noEmit` khi đổi `js/`; build C++ tăng dần + `ctest` khi đổi C++/CMake (cần đã chạy `cmake --preset native` một lần); test JS (build lại wasm nếu đổi `bindings/`); `actionlint` nếu đã cài |
+| `commit-msg` → commitlint | Message theo [Conventional Commits](https://www.conventionalcommits.org): `<type>(<scope>): <subject>` |
+
+Các type hợp lệ: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`, `style`, `revert`.
+Ví dụ: `feat(detect): hough-based candidates`, `fix(wasm): keep RGBA layout`, `docs: release steps`.
+Subject viết thường ở đầu và không có dấu chấm cuối. Thay đổi phá vỡ API thì thêm `!`: `feat(api)!: rename scan()`.
+
+`.npmrc` đặt message của `npm version` thành `chore(release): X.Y.Z` để qua được commitlint.
+Trên CI, mọi commit của pull request được commitlint kiểm tra lại, vì hook ở máy có thể bị bỏ qua bằng
+`git commit --no-verify`.
+
 ## Phát hành một phiên bản
 
 Điều kiện: CI trên `main` đang xanh, working tree sạch.
 
 ```bash
-npm version 0.2.0          # sửa package.json + package-lock.json, tạo commit "0.2.0" và tag v0.2.0
+npm version 0.2.0          # sửa package.json + package-lock.json, tạo commit "chore(release): 0.2.0" và tag v0.2.0
 git push origin main --follow-tags
 gh run watch               # (tuỳ chọn) theo dõi workflow Release
 ```
